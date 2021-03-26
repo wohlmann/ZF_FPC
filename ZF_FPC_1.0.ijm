@@ -1,10 +1,7 @@
 /*
-  This macro will combine 3 batch analysis methods for NP distribution in ZF and export report files containing the data, an extensive log file and QC images in user defined folders. 
-  Variables and parameters can be adjusted by dialogues, a batch mode is available.
-  Analyses:
-  1: accumulation in macrophages via flourescent region detection and measurement.
-  2: accumulation in endothelia via flourescent region detection and measurement.
-  3: circulation in the caudal vein by detection via flourescent vasculature or maually, followed by exclusion of accumulations and measurement.
+  This macro can be used to quantify "growth" by increase of flourescent signal e.g. due to multiplication of fluorescent xenotransplanted cancer cells or fluorescent bacteria in zebrafish larvae. It will export a report file containing the data, an extensive log file and QC images in user defined folders. 
+  optionally variables and parameters can be adjusted by dialogues for adaption to new sample types, a batch mode is available.
+  A detection background slider can be added in the future - see commented functions ("//for later addition").
 */
 macro "Zebrafish particle distribution analysis" {
 
@@ -16,18 +13,18 @@ macro "Zebrafish particle distribution analysis" {
 	File.makeDirectory(CACHE);
 	Dialog.create("Analysis options");
 	Dialog.addChoice(" Analysis Type: ", newArray("bacteria", "tumor"), "bacteria");
-	Dialog.addChoice(" relevant Channel: ", newArray("Automatic (2C vs. 3 C)", "C1-", "C2-","C3-","C4-"), "Automatic (2 vs. 3 C)");
-	Dialog.addCheckbox("set detection parameters", false);
+	Dialog.addChoice(" relevant Channel: ", newArray("Automatic (2C vs. 3 C)", "C1-", "C2-","C3-","C4-"), "Automatic (2 vs. 3 C)");	//for mixed image datasets continaing 2 and 3 channel images where the relevant chanel is the second [selected accordingly]
+	Dialog.addCheckbox("set detection parameters", false);	//for adaption to new samples this option combined with step by step analysis is useful to follow the process
 	Dialog.addCheckbox("Step-by-Step analysis", false);
 	Dialog.addCheckbox("use batch mode ", true);
 	Dialog.addCheckbox("save Quality Control Images", true);
 	Dialog.show;
-	Meth = Dialog.getChoice();
-	RelC = Dialog.getChoice();
-	ADV = Dialog.getCheckbox();
-	step = Dialog.getCheckbox();
-	batch = Dialog.getCheckbox();
-	QC = Dialog.getCheckbox();
+	Meth = Dialog.getChoice();								//method (bacteria / tumor)
+	RelC = Dialog.getChoice();								//relevant channel
+	ADV = Dialog.getCheckbox();								//advanced (user defined) parameters
+	step = Dialog.getCheckbox();							//setp by step analysis
+	batch = Dialog.getCheckbox();							//batch mode
+	QC = Dialog.getCheckbox();								//save Quality Control Images
 	if(QC==true){
 		QCF = dir2 + "QC" + File.separator;
 	File.makeDirectory(QCF);
@@ -100,6 +97,7 @@ macro "Zebrafish particle distribution analysis" {
 					//moar?
 				}
 		}
+	//clean up:
 	run("Close All");
 	print("\\Clear");
 	print("Reset: log, Results, ROI Manager");
@@ -115,7 +113,7 @@ macro "Zebrafish particle distribution analysis" {
 		print("_");
 		print("running in batch mode");
 	}
-	//counter for report
+	//counter for report:
 	N=0;
 	IMG=0;
 	nImg=0;
@@ -130,13 +128,14 @@ macro "Zebrafish particle distribution analysis" {
 	}
 	print("_");
 	for (i=0; i<list.length; i++) {						//set i=0, count nuber of list items, enlagre number +1 each cycle, start cycle at brackets
-		path = dir1+list[i];							//path location translated for code
+		path = dir1+list[i];							//path location translated
 		print("start processing of "+path+"");
 		print("_");
 		print("exporting images from *.lif to single *.tif files:");
 		run("Bio-Formats Importer", "open=[path] autoscale color_mode=Default view=Hyperstack stack_order=XYCZT open_all_series");
 		N=N+1;
 		nImg=(nImg+nImages);
+		//export single files:
 		while (nImages>0) {
 				selectImage(nImages);
 				titleS= getTitle;
@@ -148,6 +147,7 @@ macro "Zebrafish particle distribution analysis" {
 		print("finished exporting single files");
 		print("_");
 	}
+	//start analysis:
 	listS = getFileList(CACHE);
 			for (j=0; j<listS.length; j++) {
 				pathS = CACHE+listS[j];
@@ -208,7 +208,7 @@ macro "Zebrafish particle distribution analysis" {
 				}
 				ROIc = roiManager("count");
 				if (ROIc==0) {
-					print("NO ROI DETECTED for image "+title1+", generating artifical Value");
+					print("NO ROI DETECTED for image "+title1+", generating artifical region");	//for background signal
 					makeRectangle(100, 100, 50, 50);
 					roiManager("Add");
 					roiManager("select", newArray());
